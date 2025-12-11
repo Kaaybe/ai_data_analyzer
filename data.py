@@ -47,13 +47,15 @@ st.markdown("""
         font-size: 0.9rem;
         font-weight: 500;
         margin: 0 0 0.5rem 0;
-        opacity: 0.9;
+        opacity: 1;
+        color: white !important;
     }
     
     .metric-card h2 {
         font-size: 2rem;
         font-weight: 700;
         margin: 0;
+        color: white !important;
     }
     
     .info-box {
@@ -64,12 +66,25 @@ st.markdown("""
         margin: 1rem 0;
     }
     
+    .info-box h3 {
+        color: #0c4a6e !important;
+        margin-top: 0;
+    }
+    
+    .info-box p, .info-box strong {
+        color: #0c4a6e !important;
+    }
+    
     .success-box {
         background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
         padding: 1.2rem;
         border-radius: 10px;
         border-left: 5px solid #22c55e;
         margin: 1rem 0;
+    }
+    
+    .success-box strong, .success-box p {
+        color: #14532d !important;
     }
     
     .stTabs [data-baseweb="tab-list"] {
@@ -144,6 +159,7 @@ def get_feature_descriptions():
 def show_overview(df):
     """Display overview statistics"""
     st.markdown("## 📊 Dataset Overview")
+    st.markdown("")  # Add spacing
     
     col1, col2, col3, col4 = st.columns(4)
     
@@ -197,6 +213,7 @@ def show_overview(df):
     
     # Feature descriptions
     st.markdown("### 📋 Feature Descriptions")
+    st.markdown("")  # Add spacing
     descriptions = get_feature_descriptions()
     
     desc_df = pd.DataFrame([
@@ -207,7 +224,10 @@ def show_overview(df):
     
     # Sample data
     st.markdown("### 🔍 Sample Data")
+    st.markdown("")  # Add spacing
     st.dataframe(df.head(20), use_container_width=True, height=400)
+    
+    st.markdown("---")
     
     # Class distribution
     col1, col2 = st.columns(2)
@@ -249,6 +269,8 @@ def show_feature_analysis(df):
     # Analyze each feature
     features = ['buying', 'maint', 'doors', 'persons', 'lug_boot', 'safety']
     
+    st.markdown("")  # Add spacing
+    
     for i in range(0, len(features), 2):
         col1, col2 = st.columns(2)
         
@@ -266,7 +288,12 @@ def show_feature_analysis(df):
                             color_continuous_scale='viridis',
                             text='Count',
                             title=f'{feature.replace("_", " ").title()} Distribution')
-                fig.update_traces(textposition='outside')
+                fig.update_traces(textposition='outside', textfont=dict(size=14, color='#1e293b'))
+                fig.update_layout(
+                    font=dict(color='#1e293b'),
+                    plot_bgcolor='white',
+                    paper_bgcolor='white'
+                )
                 st.plotly_chart(fig, use_container_width=True)
         
         with col2:
@@ -282,12 +309,18 @@ def show_feature_analysis(df):
                             color_continuous_scale='plasma',
                             text='Count',
                             title=f'{feature.replace("_", " ").title()} Distribution')
-                fig.update_traces(textposition='outside')
+                fig.update_traces(textposition='outside', textfont=dict(size=14, color='#1e293b'))
+                fig.update_layout(
+                    font=dict(color='#1e293b'),
+                    plot_bgcolor='white',
+                    paper_bgcolor='white'
+                )
                 st.plotly_chart(fig, use_container_width=True)
 
 def show_relationship_analysis(df):
     """Display relationship analysis between features and class"""
     st.markdown("## 🔗 Feature Relationships")
+    st.markdown("")  # Add spacing
     
     features = ['buying', 'maint', 'doors', 'persons', 'lug_boot', 'safety']
     
@@ -329,7 +362,10 @@ def show_relationship_analysis(df):
             title=f'{selected_feature.replace("_", " ").title()} Distribution by Acceptability',
             xaxis_title=selected_feature.replace('_', ' ').title(),
             yaxis_title='Count',
-            height=400
+            height=400,
+            font=dict(color='#1e293b'),
+            plot_bgcolor='white',
+            paper_bgcolor='white'
         )
         st.plotly_chart(fig, use_container_width=True)
     
@@ -352,12 +388,18 @@ def show_relationship_analysis(df):
                     y=crosstab.columns,
                     color_continuous_scale='viridis',
                     text_auto=True)
-    fig.update_layout(height=400)
+    fig.update_layout(
+        height=400,
+        font=dict(color='#1e293b'),
+        plot_bgcolor='white',
+        paper_bgcolor='white'
+    )
     st.plotly_chart(fig, use_container_width=True)
 
 def show_comparative_analysis(df):
     """Display comparative analysis"""
     st.markdown("## 📊 Comparative Analysis")
+    st.markdown("")  # Add spacing
     
     features = ['buying', 'maint', 'doors', 'persons', 'lug_boot', 'safety']
     
@@ -394,7 +436,12 @@ def show_comparative_analysis(df):
                        color_continuous_scale='blues',
                        text_auto=True,
                        title=f'{feature1.replace("_", " ").title()} vs {feature2.replace("_", " ").title()}')
-        fig.update_layout(height=500)
+        fig.update_layout(
+            height=500,
+            font=dict(color='#1e293b'),
+            plot_bgcolor='white',
+            paper_bgcolor='white'
+        )
         st.plotly_chart(fig, use_container_width=True)
     
     with col2:
@@ -429,6 +476,7 @@ def show_comparative_analysis(df):
 def show_statistics(df):
     """Display statistical summary"""
     st.markdown("## 📈 Statistical Summary")
+    st.markdown("")  # Add spacing
     
     # Overall statistics
     st.markdown("### 📊 Dataset Statistics")
