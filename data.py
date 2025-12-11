@@ -18,97 +18,31 @@ st.set_page_config(
 # Custom CSS
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-    
-    * {
-        font-family: 'Inter', sans-serif;
-    }
-    
-    .main-header {
-        font-size: 3rem;
-        font-weight: 700;
-        background: linear-gradient(120deg, #667eea 0%, #764ba2 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        padding: 1rem 0;
-        text-align: center;
-    }
-    
-    .metric-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 1.5rem;
-        border-radius: 12px;
-        color: white;
-        box-shadow: 0 8px 16px rgba(102, 126, 234, 0.2);
-        text-align: center;
-    }
-    
-    .metric-card h3 {
-        font-size: 0.9rem;
-        font-weight: 500;
-        margin: 0 0 0.5rem 0;
-        opacity: 0.9;
-    }
-    
-    .metric-card h2 {
-        font-size: 2rem;
-        font-weight: 700;
-        margin: 0;
-    }
-    
-    .info-box {
-        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-        padding: 1.2rem;
-        border-radius: 10px;
-        border-left: 5px solid #0ea5e9;
-        margin: 1rem 0;
-    }
-    
-    .success-box {
-        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-        padding: 1.2rem;
-        border-radius: 10px;
-        border-left: 5px solid #22c55e;
-        margin: 1rem 0;
-    }
-    
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 10px;
-    }
-    
-    .stTabs [data-baseweb="tab"] {
-        height: 50px;
-        background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
-        border-radius: 10px;
-        padding: 0 24px;
-        font-weight: 600;
-        color: #1e293b;
-        border: 2px solid #cbd5e1;
-    }
-    
-    .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white !important;
-        border: 2px solid #5a67d8;
-    }
-    
-    /* Fix text visibility */
-    h1, h2, h3, h4, h5, h6, p, span, div {
-        color: #1e293b;
-    }
-    
-    /* DataFrames */
-    .dataframe {
-        color: #1e293b !important;
-    }
-    
-    /* Selectbox and inputs */
-    .stSelectbox label, .stSlider label, .stCheckbox label {
-        color: #1e293b !important;
-        font-weight: 600;
-    }
+
+/* --- FIX SIDEBAR BACKGROUND --- */
+[data-testid="stSidebar"] {
+    background-color: #f7f9fc !important;   /* lighter clean background */
+}
+
+/* Sidebar text color */
+[data-testid="stSidebar"] * {
+    color: #1e293b !important;
+}
+
+/* --- FIX HEADER COLOR OVERRIDE --- */
+/* Remove the forced override from ALL headings */
+h1, h2, h3, h4, h5, h6, p, span, div {
+    color: inherit !important;   /* Respect original colors */
+}
+
+/* Body text color */
+body, p, span, div {
+    color: #1e293b !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
+
 
 @st.cache_data(show_spinner=False)
 def load_car_evaluation_data():
