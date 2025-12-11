@@ -4,14 +4,13 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from datetime import datetime
 import warnings
 warnings.filterwarnings('ignore')
 
 # Page Configuration
 st.set_page_config(
-    page_title="Online Retail Analytics",
-    page_icon="🛒",
+    page_title="Car Evaluation Analytics",
+    page_icon="🚗",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -65,6 +64,14 @@ st.markdown("""
         margin: 1rem 0;
     }
     
+    .success-box {
+        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+        padding: 1.2rem;
+        border-radius: 10px;
+        border-left: 5px solid #22c55e;
+        margin: 1rem 0;
+    }
+    
     .stTabs [data-baseweb="tab-list"] {
         gap: 10px;
     }
@@ -85,40 +92,46 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 @st.cache_data(show_spinner=False)
-def load_online_retail_data():
-    """Load Online Retail dataset from UCI repository"""
+def load_car_evaluation_data():
+    """Load Car Evaluation dataset from UCI repository"""
     try:
-        # Direct link to the Excel file
-        url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00352/Online%20Retail.xlsx"
+        # Direct link to the car evaluation dataset
+        url = "https://archive.ics.uci.edu/ml/machine-learning-databases/car/car.data"
         
-        with st.spinner("📥 Loading Online Retail dataset from UCI repository..."):
-            df = pd.read_excel(url)
+        # Column names based on dataset documentation
+        columns = ['buying', 'maint', 'doors', 'persons', 'lug_boot', 'safety', 'class']
+        
+        with st.spinner("🚗 Loading Car Evaluation dataset from UCI repository..."):
+            df = pd.read_csv(url, names=columns, header=None)
             
-        # Basic cleaning
-        df = df.dropna(subset=['CustomerID'])
-        df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'])
-        df['TotalPrice'] = df['Quantity'] * df['UnitPrice']
-        
-        # Remove cancelled orders (negative quantities)
-        df = df[df['Quantity'] > 0]
-        df = df[df['UnitPrice'] > 0]
-        
         return df
     except Exception as e:
         st.error(f"❌ Error loading dataset: {str(e)}")
         st.info("💡 Please check your internet connection and try again.")
         return None
 
+def get_feature_descriptions():
+    """Return descriptions of all features"""
+    return {
+        'buying': 'Buying price (vhigh, high, med, low)',
+        'maint': 'Maintenance price (vhigh, high, med, low)',
+        'doors': 'Number of doors (2, 3, 4, 5more)',
+        'persons': 'Capacity in terms of persons (2, 4, more)',
+        'lug_boot': 'Size of luggage boot (small, med, big)',
+        'safety': 'Estimated safety (low, med, high)',
+        'class': 'Car acceptability (unacc, acc, good, vgood)'
+    }
+
 def show_overview(df):
     """Display overview statistics"""
-    st.markdown("## 📊 Overview")
+    st.markdown("## 📊 Dataset Overview")
     
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
         st.markdown(f"""
         <div class="metric-card">
-            <h3>Total Transactions</h3>
+            <h3>Total Cars</h3>
             <h2>{len(df):,}</h2>
         </div>
         """, unsafe_allow_html=True)
@@ -126,24 +139,26 @@ def show_overview(df):
     with col2:
         st.markdown(f"""
         <div class="metric-card">
-            <h3>Unique Customers</h3>
-            <h2>{df['CustomerID'].nunique():,}</h2>
+            <h3>Features</h3>
+            <h2>{len(df.columns)-1}</h2>
         </div>
         """, unsafe_allow_html=True)
     
     with col3:
+        acceptable = df[df['class'].isin(['acc', 'good', 'vgood'])].shape[0]
         st.markdown(f"""
         <div class="metric-card">
-            <h3>Total Revenue</h3>
-            <h2>£{df['TotalPrice'].sum():,.0f}</h2>
+            <h3>Acceptable</h3>
+            <h2>{acceptable}</h2>
         </div>
         """, unsafe_allow_html=True)
     
     with col4:
+        unacceptable = df[df['class'] == 'unacc'].shape[0]
         st.markdown(f"""
         <div class="metric-card">
-            <h3>Unique Products</h3>
-            <h2>{df['StockCode'].nunique():,}</h2>
+            <h3>Unacceptable</h3>
+            <h2>{unacceptable}</h2>
         </div>
         """, unsafe_allow_html=True)
     
@@ -152,204 +167,332 @@ def show_overview(df):
     # Dataset info
     st.markdown("""
     <div class="info-box">
-        <h3>🛒 About the Online Retail Dataset</h3>
+        <h3>🚗 About the Car Evaluation Dataset</h3>
         <p><strong>Source:</strong> UCI Machine Learning Repository</p>
-        <p><strong>Description:</strong> Transactional data from a UK-based online retail company (2010-2011)</p>
-        <p><strong>Contains:</strong> All transactions between 01/12/2010 and 09/12/2011</p>
+        <p><strong>Created by:</strong> Marko Bohanec</p>
+        <p><strong>Purpose:</strong> Derived from a simple hierarchical decision model for car evaluation</p>
+        <p><strong>Instances:</strong> 1728 (complete set of all possible combinations)</p>
+        <p><strong>Task:</strong> Classification of cars into acceptability classes</p>
     </div>
     """, unsafe_allow_html=True)
     
+    # Feature descriptions
+    st.markdown("### 📋 Feature Descriptions")
+    descriptions = get_feature_descriptions()
+    
+    desc_df = pd.DataFrame([
+        {'Feature': k, 'Description': v} 
+        for k, v in descriptions.items()
+    ])
+    st.dataframe(desc_df, use_container_width=True, hide_index=True)
+    
+    # Sample data
+    st.markdown("### 🔍 Sample Data")
+    st.dataframe(df.head(20), use_container_width=True, height=400)
+    
+    # Class distribution
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown("### 📅 Date Range")
-        st.write(f"**Start:** {df['InvoiceDate'].min().strftime('%Y-%m-%d')}")
-        st.write(f"**End:** {df['InvoiceDate'].max().strftime('%Y-%m-%d')}")
+        st.markdown("### 🎯 Acceptability Distribution")
+        class_counts = df['class'].value_counts().reset_index()
+        class_counts.columns = ['Acceptability', 'Count']
+        
+        color_map = {
+            'unacc': '#ef4444',
+            'acc': '#f59e0b',
+            'good': '#3b82f6',
+            'vgood': '#22c55e'
+        }
+        
+        fig = px.pie(class_counts, values='Count', names='Acceptability',
+                    title='Car Acceptability Classes',
+                    color='Acceptability',
+                    color_discrete_map=color_map,
+                    hole=0.4)
+        fig.update_traces(textposition='inside', textinfo='percent+label')
+        st.plotly_chart(fig, use_container_width=True)
     
     with col2:
-        st.markdown("### 🌍 Countries Served")
-        st.write(f"**Total Countries:** {df['Country'].nunique()}")
-        top_countries = df['Country'].value_counts().head(5)
-        st.write("**Top 5:**")
-        for country, count in top_countries.items():
-            st.write(f"- {country}: {count:,} transactions")
-    
-    st.markdown("### 📋 Sample Data")
-    st.dataframe(df.head(10), use_container_width=True)
+        st.markdown("### 📊 Class Counts")
+        fig = px.bar(class_counts, x='Acceptability', y='Count',
+                    color='Acceptability',
+                    color_discrete_map=color_map,
+                    text='Count',
+                    title='Distribution of Acceptability Classes')
+        fig.update_traces(textposition='outside')
+        st.plotly_chart(fig, use_container_width=True)
 
-def show_sales_analysis(df):
-    """Display sales analysis"""
-    st.markdown("## 💰 Sales Analysis")
+def show_feature_analysis(df):
+    """Display feature analysis"""
+    st.markdown("## 🔍 Feature Analysis")
     
-    # Time-based analysis
-    df['Year'] = df['InvoiceDate'].dt.year
-    df['Month'] = df['InvoiceDate'].dt.month
-    df['YearMonth'] = df['InvoiceDate'].dt.to_period('M').astype(str)
+    # Analyze each feature
+    features = ['buying', 'maint', 'doors', 'persons', 'lug_boot', 'safety']
+    
+    for i in range(0, len(features), 2):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if i < len(features):
+                feature = features[i]
+                st.markdown(f"### {feature.replace('_', ' ').title()}")
+                
+                # Value counts
+                value_counts = df[feature].value_counts().reset_index()
+                value_counts.columns = [feature, 'Count']
+                
+                fig = px.bar(value_counts, x=feature, y='Count',
+                            color='Count',
+                            color_continuous_scale='viridis',
+                            text='Count',
+                            title=f'{feature.replace("_", " ").title()} Distribution')
+                fig.update_traces(textposition='outside')
+                st.plotly_chart(fig, use_container_width=True)
+        
+        with col2:
+            if i + 1 < len(features):
+                feature = features[i + 1]
+                st.markdown(f"### {feature.replace('_', ' ').title()}")
+                
+                value_counts = df[feature].value_counts().reset_index()
+                value_counts.columns = [feature, 'Count']
+                
+                fig = px.bar(value_counts, x=feature, y='Count',
+                            color='Count',
+                            color_continuous_scale='plasma',
+                            text='Count',
+                            title=f'{feature.replace("_", " ").title()} Distribution')
+                fig.update_traces(textposition='outside')
+                st.plotly_chart(fig, use_container_width=True)
+
+def show_relationship_analysis(df):
+    """Display relationship analysis between features and class"""
+    st.markdown("## 🔗 Feature Relationships")
+    
+    features = ['buying', 'maint', 'doors', 'persons', 'lug_boot', 'safety']
+    
+    # Feature selection
+    selected_feature = st.selectbox(
+        "Select feature to analyze:",
+        features,
+        format_func=lambda x: x.replace('_', ' ').title()
+    )
+    
+    st.markdown(f"### {selected_feature.replace('_', ' ').title()} vs Acceptability")
+    
+    # Cross-tabulation
+    crosstab = pd.crosstab(df[selected_feature], df['class'])
+    
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        # Stacked bar chart
+        fig = go.Figure()
+        
+        colors = {
+            'unacc': '#ef4444',
+            'acc': '#f59e0b',
+            'good': '#3b82f6',
+            'vgood': '#22c55e'
+        }
+        
+        for col in crosstab.columns:
+            fig.add_trace(go.Bar(
+                name=col,
+                x=crosstab.index,
+                y=crosstab[col],
+                marker_color=colors.get(col, '#667eea')
+            ))
+        
+        fig.update_layout(
+            barmode='stack',
+            title=f'{selected_feature.replace("_", " ").title()} Distribution by Acceptability',
+            xaxis_title=selected_feature.replace('_', ' ').title(),
+            yaxis_title='Count',
+            height=400
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    
+    with col2:
+        st.markdown("#### Cross-tabulation")
+        st.dataframe(crosstab, use_container_width=True)
+        
+        st.markdown("#### Percentage Distribution")
+        crosstab_pct = crosstab.div(crosstab.sum(axis=1), axis=0) * 100
+        st.dataframe(crosstab_pct.round(1), use_container_width=True)
+    
+    # Heatmap
+    st.markdown("### 🔥 Heatmap: Feature vs Acceptability")
+    
+    fig = px.imshow(crosstab.T,
+                    labels=dict(x=selected_feature.replace('_', ' ').title(), 
+                               y="Acceptability", 
+                               color="Count"),
+                    x=crosstab.index,
+                    y=crosstab.columns,
+                    color_continuous_scale='viridis',
+                    text_auto=True)
+    fig.update_layout(height=400)
+    st.plotly_chart(fig, use_container_width=True)
+
+def show_comparative_analysis(df):
+    """Display comparative analysis"""
+    st.markdown("## 📊 Comparative Analysis")
+    
+    features = ['buying', 'maint', 'doors', 'persons', 'lug_boot', 'safety']
     
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown("### 📈 Revenue Over Time")
-        monthly_revenue = df.groupby('YearMonth')['TotalPrice'].sum().reset_index()
-        fig = px.line(monthly_revenue, x='YearMonth', y='TotalPrice',
-                     title='Monthly Revenue Trend',
-                     labels={'TotalPrice': 'Revenue (£)', 'YearMonth': 'Month'})
-        fig.update_traces(line_color='#667eea', line_width=3)
+        feature1 = st.selectbox(
+            "Select first feature:",
+            features,
+            format_func=lambda x: x.replace('_', ' ').title()
+        )
+    
+    with col2:
+        feature2 = st.selectbox(
+            "Select second feature:",
+            [f for f in features if f != feature1],
+            format_func=lambda x: x.replace('_', ' ').title()
+        )
+    
+    st.markdown(f"### {feature1.replace('_', ' ').title()} vs {feature2.replace('_', ' ').title()}")
+    
+    # Create contingency table
+    contingency = pd.crosstab(df[feature1], df[feature2])
+    
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        fig = px.imshow(contingency,
+                       labels=dict(x=feature2.replace('_', ' ').title(),
+                                  y=feature1.replace('_', ' ').title(),
+                                  color="Count"),
+                       x=contingency.columns,
+                       y=contingency.index,
+                       color_continuous_scale='blues',
+                       text_auto=True,
+                       title=f'{feature1.replace("_", " ").title()} vs {feature2.replace("_", " ").title()}')
+        fig.update_layout(height=500)
         st.plotly_chart(fig, use_container_width=True)
     
     with col2:
-        st.markdown("### 📦 Orders Over Time")
-        monthly_orders = df.groupby('YearMonth')['InvoiceNo'].nunique().reset_index()
-        fig = px.bar(monthly_orders, x='YearMonth', y='InvoiceNo',
-                    title='Monthly Order Count',
-                    labels={'InvoiceNo': 'Number of Orders', 'YearMonth': 'Month'},
-                    color='InvoiceNo',
-                    color_continuous_scale='viridis')
-        st.plotly_chart(fig, use_container_width=True)
+        st.markdown("#### Contingency Table")
+        st.dataframe(contingency, use_container_width=True, height=400)
     
-    # Top products
-    st.markdown("### 🏆 Top Products by Revenue")
-    top_products = df.groupby('Description')['TotalPrice'].sum().sort_values(ascending=False).head(10).reset_index()
-    fig = px.bar(top_products, x='TotalPrice', y='Description',
-                orientation='h',
-                title='Top 10 Products by Revenue',
-                labels={'TotalPrice': 'Revenue (£)', 'Description': 'Product'},
-                color='TotalPrice',
-                color_continuous_scale='blues')
-    st.plotly_chart(fig, use_container_width=True)
+    # Analysis by acceptability
+    st.markdown("### 🎯 Analysis by Acceptability Class")
     
-    # Revenue by country
-    st.markdown("### 🌍 Revenue by Country")
-    country_revenue = df.groupby('Country')['TotalPrice'].sum().sort_values(ascending=False).head(10).reset_index()
-    fig = px.bar(country_revenue, x='Country', y='TotalPrice',
-                title='Top 10 Countries by Revenue',
-                labels={'TotalPrice': 'Revenue (£)'},
-                color='TotalPrice',
-                color_continuous_scale='viridis')
-    st.plotly_chart(fig, use_container_width=True)
-
-def show_customer_analysis(df):
-    """Display customer analysis"""
-    st.markdown("## 👥 Customer Analysis")
+    selected_class = st.selectbox(
+        "Select acceptability class:",
+        df['class'].unique(),
+        format_func=lambda x: x.upper()
+    )
     
-    # Customer metrics
-    customer_stats = df.groupby('CustomerID').agg({
-        'InvoiceNo': 'nunique',
-        'TotalPrice': 'sum',
-        'Quantity': 'sum'
-    }).reset_index()
-    customer_stats.columns = ['CustomerID', 'Orders', 'Revenue', 'Items']
+    filtered_df = df[df['class'] == selected_class]
     
     col1, col2, col3 = st.columns(3)
     
-    with col1:
-        st.markdown(f"""
-        <div class="metric-card">
-            <h3>Avg Orders/Customer</h3>
-            <h2>{customer_stats['Orders'].mean():.1f}</h2>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col2:
-        st.markdown(f"""
-        <div class="metric-card">
-            <h3>Avg Revenue/Customer</h3>
-            <h2>£{customer_stats['Revenue'].mean():.0f}</h2>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col3:
-        st.markdown(f"""
-        <div class="metric-card">
-            <h3>Avg Items/Customer</h3>
-            <h2>{customer_stats['Items'].mean():.0f}</h2>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown("### 💎 Top Customers by Revenue")
-        top_customers = customer_stats.nlargest(10, 'Revenue')
-        fig = px.bar(top_customers, x='CustomerID', y='Revenue',
-                    title='Top 10 Customers',
-                    labels={'Revenue': 'Total Revenue (£)'},
-                    color='Revenue',
-                    color_continuous_scale='purples')
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.markdown("### 📊 Customer Segmentation")
-        fig = px.histogram(customer_stats, x='Revenue', nbins=50,
-                          title='Customer Revenue Distribution',
-                          labels={'Revenue': 'Revenue (£)', 'count': 'Number of Customers'},
-                          color_discrete_sequence=['#764ba2'])
-        st.plotly_chart(fig, use_container_width=True)
-    
-    # RFM Analysis Preview
-    st.markdown("### 🎯 Customer Behavior Metrics")
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        fig = px.scatter(customer_stats, x='Orders', y='Revenue',
-                        title='Orders vs Revenue',
-                        labels={'Orders': 'Number of Orders', 'Revenue': 'Total Revenue (£)'},
-                        color='Items',
-                        color_continuous_scale='viridis',
-                        hover_data=['CustomerID'])
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        fig = px.box(customer_stats, y='Revenue',
-                    title='Revenue Distribution',
-                    labels={'Revenue': 'Revenue (£)'},
-                    color_discrete_sequence=['#667eea'])
-        st.plotly_chart(fig, use_container_width=True)
+    for idx, feature in enumerate([feature1, feature2, 'safety']):
+        with [col1, col2, col3][idx]:
+            value_counts = filtered_df[feature].value_counts().reset_index()
+            value_counts.columns = [feature, 'Count']
+            
+            fig = px.pie(value_counts, 
+                        values='Count', 
+                        names=feature,
+                        title=f'{feature.replace("_", " ").title()} ({selected_class.upper()})',
+                        hole=0.4)
+            st.plotly_chart(fig, use_container_width=True)
 
-def show_product_analysis(df):
-    """Display product analysis"""
-    st.markdown("## 📦 Product Analysis")
+def show_statistics(df):
+    """Display statistical summary"""
+    st.markdown("## 📈 Statistical Summary")
+    
+    # Overall statistics
+    st.markdown("### 📊 Dataset Statistics")
+    
+    stats_data = []
+    for col in df.columns:
+        unique_values = df[col].nunique()
+        most_common = df[col].mode()[0]
+        most_common_count = (df[col] == most_common).sum()
+        
+        stats_data.append({
+            'Feature': col.replace('_', ' ').title(),
+            'Unique Values': unique_values,
+            'Most Common': most_common,
+            'Most Common Count': most_common_count,
+            'Percentage': f"{(most_common_count/len(df)*100):.1f}%"
+        })
+    
+    stats_df = pd.DataFrame(stats_data)
+    st.dataframe(stats_df, use_container_width=True, hide_index=True)
+    
+    # Acceptability breakdown
+    st.markdown("### 🎯 Acceptability Analysis")
     
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown("### 🔥 Most Popular Products")
-        top_products_qty = df.groupby('Description')['Quantity'].sum().sort_values(ascending=False).head(10).reset_index()
-        fig = px.bar(top_products_qty, x='Quantity', y='Description',
-                    orientation='h',
-                    title='Top 10 Products by Quantity Sold',
-                    labels={'Quantity': 'Total Quantity Sold'},
-                    color='Quantity',
-                    color_continuous_scale='reds')
-        st.plotly_chart(fig, use_container_width=True)
+        st.markdown("#### Class Distribution")
+        class_stats = df['class'].value_counts().reset_index()
+        class_stats.columns = ['Class', 'Count']
+        class_stats['Percentage'] = (class_stats['Count'] / len(df) * 100).round(2)
+        st.dataframe(class_stats, use_container_width=True, hide_index=True)
     
     with col2:
-        st.markdown("### 💰 Highest Value Products")
-        avg_price = df.groupby('Description')['UnitPrice'].mean().sort_values(ascending=False).head(10).reset_index()
-        fig = px.bar(avg_price, x='UnitPrice', y='Description',
-                    orientation='h',
-                    title='Top 10 Products by Average Price',
-                    labels={'UnitPrice': 'Average Price (£)'},
-                    color='UnitPrice',
-                    color_continuous_scale='greens')
-        st.plotly_chart(fig, use_container_width=True)
+        st.markdown("#### Key Insights")
+        
+        total = len(df)
+        unacc = (df['class'] == 'unacc').sum()
+        acc = (df['class'] == 'acc').sum()
+        good = (df['class'] == 'good').sum()
+        vgood = (df['class'] == 'vgood').sum()
+        
+        st.markdown(f"""
+        <div class="success-box">
+        <strong>📊 Quick Stats:</strong><br><br>
+        • Unacceptable: {unacc} ({unacc/total*100:.1f}%)<br>
+        • Acceptable: {acc} ({acc/total*100:.1f}%)<br>
+        • Good: {good} ({good/total*100:.1f}%)<br>
+        • Very Good: {vgood} ({vgood/total*100:.1f}%)<br><br>
+        <strong>Acceptable Cars (acc+good+vgood):</strong> {acc+good+vgood} ({(acc+good+vgood)/total*100:.1f}%)
+        </div>
+        """, unsafe_allow_html=True)
     
-    # Price distribution
-    st.markdown("### 💵 Price Distribution")
-    price_data = df[df['UnitPrice'] < df['UnitPrice'].quantile(0.95)]  # Remove outliers for better visualization
-    fig = px.histogram(price_data, x='UnitPrice', nbins=50,
-                      title='Product Price Distribution (95th percentile)',
-                      labels={'UnitPrice': 'Unit Price (£)', 'count': 'Frequency'},
-                      color_discrete_sequence=['#667eea'])
-    st.plotly_chart(fig, use_container_width=True)
+    # Feature importance for each class
+    st.markdown("### 🔍 Feature Analysis by Class")
+    
+    selected_class = st.selectbox(
+        "Select class for detailed analysis:",
+        df['class'].unique(),
+        format_func=lambda x: x.upper(),
+        key='stats_class'
+    )
+    
+    class_df = df[df['class'] == selected_class]
+    
+    feature_cols = [col for col in df.columns if col != 'class']
+    
+    cols = st.columns(3)
+    
+    for idx, feature in enumerate(feature_cols):
+        with cols[idx % 3]:
+            st.markdown(f"**{feature.replace('_', ' ').title()}**")
+            value_counts = class_df[feature].value_counts().head(3)
+            for val, count in value_counts.items():
+                st.write(f"• {val}: {count} ({count/len(class_df)*100:.1f}%)")
 
 def main():
     # Header
-    st.markdown('<h1 class="main-header">🛒 Online Retail Analytics Dashboard</h1>', unsafe_allow_html=True)
-    st.markdown('<p style="text-align: center; color: #64748b; font-size: 1.1rem; margin-bottom: 2rem;">Comprehensive Analysis of E-Commerce Transactions</p>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-header">🚗 Car Evaluation Analysis Dashboard</h1>', unsafe_allow_html=True)
+    st.markdown('<p style="text-align: center; color: #64748b; font-size: 1.1rem; margin-bottom: 2rem;">Comprehensive Analysis of Car Acceptability Dataset</p>', unsafe_allow_html=True)
     
     # Load data
-    df = load_online_retail_data()
+    df = load_car_evaluation_data()
     
     if df is None:
         st.stop()
@@ -359,44 +502,62 @@ def main():
         st.markdown("## 🎛️ Dashboard Controls")
         st.markdown("---")
         
-        # Date filter
-        st.markdown("### 📅 Date Range Filter")
-        min_date = df['InvoiceDate'].min().date()
-        max_date = df['InvoiceDate'].max().date()
+        # Filters
+        st.markdown("### 🔍 Filters")
         
-        date_range = st.date_input(
-            "Select date range:",
-            value=(min_date, max_date),
-            min_value=min_date,
-            max_value=max_date
-        )
+        # Class filter
+        classes = ['All'] + df['class'].unique().tolist()
+        selected_class = st.selectbox("Filter by Acceptability:", classes)
         
-        if len(date_range) == 2:
-            mask = (df['InvoiceDate'].dt.date >= date_range[0]) & (df['InvoiceDate'].dt.date <= date_range[1])
-            df = df[mask]
+        if selected_class != 'All':
+            df = df[df['class'] == selected_class]
+        
+        # Safety filter
+        safety_levels = ['All'] + df['safety'].unique().tolist()
+        selected_safety = st.selectbox("Filter by Safety:", safety_levels)
+        
+        if selected_safety != 'All':
+            df = df[df['safety'] == selected_safety]
         
         st.markdown("---")
-        st.markdown("### ℹ️ About")
-        st.info("This dashboard analyzes the Online Retail dataset from UCI, containing transactions from a UK-based company.")
         
-        st.markdown("### 📊 Data Quality")
+        # Info
+        st.markdown("### ℹ️ About")
+        st.info("This dashboard analyzes the Car Evaluation dataset from UCI, containing 1,728 instances of car acceptability classifications.")
+        
+        st.markdown("### 📊 Current Data")
         st.write(f"**Records:** {len(df):,}")
-        st.write(f"**Missing Values:** {df.isnull().sum().sum()}")
+        st.write(f"**Features:** {len(df.columns)-1}")
+        
+        if len(df) < 1728:
+            st.warning(f"⚠️ Filtered view ({len(df)} records)")
     
     # Main tabs
-    tabs = st.tabs(["📊 Overview", "💰 Sales", "👥 Customers", "📦 Products"])
+    tabs = st.tabs(["📊 Overview", "🔍 Features", "🔗 Relationships", "📊 Comparison", "📈 Statistics"])
     
     with tabs[0]:
         show_overview(df)
     
     with tabs[1]:
-        show_sales_analysis(df)
+        show_feature_analysis(df)
     
     with tabs[2]:
-        show_customer_analysis(df)
+        show_relationship_analysis(df)
     
     with tabs[3]:
-        show_product_analysis(df)
+        show_comparative_analysis(df)
+    
+    with tabs[4]:
+        show_statistics(df)
+    
+    # Footer
+    st.markdown("---")
+    st.markdown("""
+    <div style='text-align: center; color: #64748b; padding: 1rem;'>
+        <p>🚗 Car Evaluation Dataset | UCI Machine Learning Repository</p>
+        <p>Dashboard created with Streamlit & Plotly</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
