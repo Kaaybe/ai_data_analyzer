@@ -1,181 +1,69 @@
-{
-  "nbformat": 4,
-  "nbformat_minor": 0,
-  "metadata": {
-    "colab": {
-      "provenance": [],
-      "authorship_tag": "ABX9TyM+QZ4Vz3S1eZBs3Z4d3O1c",
-      "include_colab_link": True
-    },
-    "kernelspec": {
-      "name": "python3",
-      "display_name": "Python 3"
-    },
-    "language_info": {
-      "name": "python"
-    }
-  },
-  "cells": [
-    {
-      "cell_type": "markdown",
-      "metadata": {
-        "id": "view-in-github",
-        "colab_type": "text"
-      },
-      "source": [
-        "<a href=\"https://colab.research.google.com/github/Kaaybe/ai_data_analyzer/blob/main/dat.ipynb\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
-      ]
-    },
-    {
-      "cell_type": "code",
-      "source": [
-        "!git config --global user.email \"glo.wan.kih@gmail.com\"\n",
-        "!git config --global user.name \"Kaaybe\""
-      ],
-      "metadata": {
-        "id": "QBem0kH87Mvz"
-      },
-      "execution_count": 26,
-      "outputs": []
-    },
-    {
-      "cell_type": "code",
-      "source": [
-        "%%writefile app.py\n",
-        "# --- Streamlit Wine Quality Analyzer ---\n",
-        "import streamlit as st\n",
-        "import pandas as pd\n",
-        "import numpy as np\n",
-        "import matplotlib.pyplot as plt\n",
-        "import seaborn as sns\n",
-        "from sklearn.preprocessing import StandardScaler\n",
-        "from sklearn.model_selection import train_test_split\n",
-        "from sklearn.ensemble import RandomForestClassifier\n",
-        "from sklearn.metrics import classification_report, confusion_matrix\n",
-        "import warnings\n",
-        "warnings.filterwarnings('ignore')\n",
-        "\n",
-        "st.set_page_config(page_title=\"Wine Quality Analyzer\", layout=\"wide\", page_icon=\"🍷\")\n",
-        "\n",
-        "st.title(\"🍷 Wine Quality Analysis Dashboard\")\n",
-        "st.markdown(\"**Dataset: UCI Machine Learning Repository - Wine Quality Dataset**\")\n",
-        "\n",
-        "@st.cache_data\n",
-        "def load_wine_data():\n",
-        "    url_red = \"https://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv\"\n",
-        "    url_white = \"https://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-white.csv\"\n",
-        "\n",
-        "    red = pd.read_csv(url_red, sep=\";\")\n",
-        "    red[\"wine_type\"] = \"Red\"\n",
-        "\n",
-        "    white = pd.read_csv(url_white, sep=\";\")\n",
-        "    white[\"wine_type\"] = \"White\"\n",
-        "\n",
-        "    df = pd.concat([red, white], ignore_index=True)\n",
-        "    df[\"quality_category\"] = pd.cut(df[\"quality\"], bins=[0,5,6,10],\n",
-        "                                    labels=[\"Low\",\"Medium\",\"High\"])\n",
-        "    return df\n",
-        "\n",
-        "df = load_wine_data()\n",
-        "\n",
-        "st.write(\"### Data Preview\")\n",
-        "st.dataframe(df.head())\n",
-        "\n",
-        "st.write(\"### Basic Statistics\")\n",
-        "st.dataframe(df.describe())\n",
-        "\n",
-        "st.write(\"### Quality Distribution\")\n",
-        "fig, ax = plt.subplots()\n",
-        "sns.countplot(data=df, x=\"quality\", hue=\"wine_type\", ax=ax)\n",
-        "st.pyplot(fig)\n",
-        "\n",
-        "st.write(\"### Correlation Heatmap\")\n",
-        "fig2, ax2 = plt.subplots(figsize=(12,6))\n",
-        "sns.heatmap(df.corr(), annot=False, cmap=\"coolwarm\", ax=ax2)\n",
-        "st.pyplot(fig2)\n"
-      ],
-      "metadata": {
-        "colab": {
-          "base_uri": "https://localhost:8080/"
-        },
-        "id": "tHxzbvIh7MiS",
-        "outputId": "954cdeb5-7c52-4b8a-d559-10ba498ef679"
-      },
-      "execution_count": 27,
-      "outputs": [
-        {
-          "output_type": "stream",
-          "name": "stdout",
-          "text": [
-            "Overwriting app.py\n"
-          ]
-        }
-      ]
-    },
-    {
-      "cell_type": "code",
-      "source": [
-        "%%writefile requirements.txt\n",
-        "streamlit\n",
-        "pandas\n",
-        "numpy\n",
-        "matplotlib\n",
-        "seaborn\n",
-        "scikit-learn\n"
-      ],
-      "metadata": {
-        "colab": {
-          "base_uri": "https://localhost:8080/"
-        },
-        "id": "VzLJBGgi7VXs",
-        "outputId": "ec1f1a1f-823f-4ba9-fd44-b7a067b9b149"
-      },
-      "execution_count": 28,
-      "outputs": [
-        {
-          "output_type": "stream",
-          "name": "stdout",
-          "text": [
-            "Overwriting requirements.txt\n"
-          ]
-        }
-      ]
-    },
-    {
-      "cell_type": "code",
-      "source": [],
-      "metadata": {
-        "id": "zffMjGnb9HMN"
-      },
-      "execution_count": 28,
-      "outputs": []
-    },
-    {
-      "cell_type": "code",
-      "source": [
-        "!git init\n",
-        "!git add .\n",
-        "!git commit -m \"Initial commit: Wine Quality Analyzer\"\n"
-      ],
-      "metadata": {
-        "colab": {
-          "base_uri": "https://localhost:8080/"
-        },
-        "id": "jCIkq0lE7W_x",
-        "outputId": "494f4709-e9aa-4879-d581-4190ae9af545"
-      },
-      "execution_count": 29,
-      "outputs": [
-        {
-          "output_type": "stream",
-          "name": "stdout",
-          "text": [
-            "Reinitialized existing Git repository in /content/.git/\n",
-            "On branch main\n",
-            "nothing to commit, working tree clean\n"
-          ]
-        }
-      ]
-    }
-  ]
+# data.py
+
+import streamlit as st
+import pandas as pd
+# Add any other libraries you need (e.g., numpy, matplotlib) here:
+# import numpy as np
+
+# --- Configuration (if needed, keep it separate from the main UI code) ---
+# It's best practice to use Streamlit's global functions or session_state for config
+APP_CONFIG = {
+    "title": "AI Data Analyzer",
+    "version": "1.0",
+    "include_colab_link": True  # **FIXED: Must be True (capitalized)**
 }
+
+
+# --- Main Application Logic ---
+def main():
+    # 1. SET THE PAGE CONFIGURATION (Optional, but recommended for a better look)
+    st.set_page_config(
+        page_title=APP_CONFIG["title"],
+        layout="wide",  # Use 'wide' layout for more screen space
+        initial_sidebar_state="expanded"
+    )
+
+    # 2. HEADER
+    st.title(APP_CONFIG["title"])
+    st.subheader("Your AI-Powered Tool for Data Exploration")
+
+    # 3. FILE UPLOADER (Assuming this is an AI Data Analyzer)
+    uploaded_file = st.file_uploader("Upload a CSV file", type=['csv'])
+
+    # 4. CONDITIONAL LOGIC BASED ON UPLOAD
+    if uploaded_file is not None:
+        # Read the file into a DataFrame
+        try:
+            df = pd.read_csv(uploaded_file)
+            st.success("File uploaded successfully!")
+
+            # Display the data
+            st.markdown("---")
+            st.header("1. Data Preview")
+            st.dataframe(df.head())
+
+            # Display basic stats
+            st.header("2. Basic Statistics")
+            st.write(df.describe())
+
+            # Add your custom analysis/AI logic here...
+            # st.header("3. AI Analysis")
+            # ...
+            
+        except Exception as e:
+            st.error(f"Error reading file: {e}")
+            st.info("Please ensure your CSV file is correctly formatted.")
+
+    else:
+        # Message to show when no file is uploaded
+        st.info("Please upload a CSV file to begin analysis.")
+        
+        # Optionally show the configuration info nicely, instead of as raw output
+        st.markdown("---")
+        st.text(f"App Version: {APP_CONFIG['version']}")
+
+
+# --- Run the Main Function ---
+# This ensures that all the code above runs correctly and is structured.
+if __name__ == "__main__":
+    main()
