@@ -5,58 +5,29 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from scipy import stats
-# The following ML/PCA imports are kept but the functions are removed/simplified 
-# as they are not suitable for the Online Retail dataset without major changes.
-# Keeping the imports ensures the app works if you later re-add generic ML logic.
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, confusion_matrix, roc_curve, auc
+from ucimlrepo import fetch_ucirepo # Import necessary for clean data loading
 import warnings
-import io
 warnings.filterwarnings('ignore')
 
 # Configuration
 APP_CONFIG = {
-    "title": "🛒 Online Retail Transaction Data Analyzer",
+    "title": "🚗 Car Evaluation Classification Analyzer",
     "version": "1.0",
-    "description": "Exploratory Data Analysis of the UCI Online Retail Dataset"
+    "description": "AI-Powered Analysis of Car Evaluation Decisions (Categorical Data)"
 }
 
-# --- CORE FUNCTION: DATA LOADING ---
-@st.cache_data
-def load_online_retail_dataset():
-    """Load the Online Retail dataset directly from the UCI Excel link."""
-    st.info("🔄 Attempting to load Online Retail data from UCI. This may take a moment...")
-    
-    # Direct link to the Excel file from the UCI dataset page (ID 352)
-    # NOTE: pd.read_excel requires 'openpyxl' to be installed (must be in requirements.txt)
-    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00352/Online%20Retail.xlsx"
-    
-    try:
-        df = pd.read_excel(url)
-        # Drop rows with missing CustomerID (common practice for this dataset)
-        df.dropna(subset=['CustomerID'], inplace=True)
-        # Ensure CustomerID is an integer
-        df['CustomerID'] = df['CustomerID'].astype(int)
-        
-        st.success(f"✅ Data loaded successfully! Total {len(df)} transactions.")
-        return df
-    except Exception as e:
-        st.error(f"FATAL ERROR LOADING DATA. Check your requirements.txt for 'openpyxl'. Details: {e}")
-        return pd.DataFrame() # Return empty DataFrame on failure
-
-
-# Custom CSS for better styling (kept as provided)
+# --- CUSTOM CSS (Kept as provided) ---
 def load_custom_css():
     st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     
-    * {
-        font-family: 'Inter', sans-serif;
-    }
+    * { font-family: 'Inter', sans-serif; }
     
     .main-header {
         font-size: 3rem;
@@ -199,34 +170,53 @@ def load_custom_css():
     </style>
     """, unsafe_allow_html=True)
 
-# --- SIMPLIFIED ANALYSIS FUNCTIONS FOR ONLINE RETAIL ---
+# --- CORE FUNCTION: DATA LOADING (Updated for Car Evaluation ID 19) ---
+@st.cache_data
+def load_car_evaluation_dataset():
+    """Load the Car Evaluation dataset using ucimlrepo"""
+    try:
+        # Car Evaluation dataset ID is 19
+        dataset = fetch_ucirepo(id=19) 
+        X = dataset.data.features
+        y = dataset.data.targets
+        
+        # Combine features and target into a single DataFrame
+        df = pd.concat([X, y], axis=1)
+        
+        # The dataset is clean, but columns are named generally by ucimlrepo
+        df.columns = ['Buying', 'Maint', 'Doors', 'Persons', 'Lug_Boot', 'Safety', 'Evaluation']
+        
+        st.success(f"✅ Data loaded successfully! Total {len(df)} car evaluations.")
+        return df
+    except Exception as e:
+        st.error(f"Error loading dataset using ucimlrepo: {e}. Ensure 'ucimlrepo' is in requirements.txt")
+        return pd.DataFrame()
 
 def display_dataset_info():
-    """Display information about the Online Retail dataset"""
+    """Display information about the Car Evaluation dataset"""
     st.markdown("""
     <div class="info-box">
-        <h3>🛒 About the Online Retail Dataset</h3>
-        <p><strong>Source:</strong> UCI Machine Learning Repository (ID 352)</p>
-        <p><strong>Description:</strong> A transactional dataset containing all the transactions occurring between 01/12/2010 and 09/12/2011 for a UK-based non-store online retail.</p>
-        <p><strong>Key Columns:</strong> InvoiceNo, StockCode, Description, Quantity, InvoiceDate, UnitPrice, CustomerID, Country</p>
+        <h3>🚗 About the Car Evaluation Dataset</h3>
+        <p><strong>Source:</strong> UCI Machine Learning Repository (ID 19)</p>
+        <p><strong>Instances:</strong> 1728 evaluations</p>
+        <p><strong>Features:</strong> 6 categorical attributes (Buying Price, Maintenance Cost, Doors, Persons, Luggage Boot, Safety)</p>
+        <p><strong>Target:</strong> Car Evaluation (unacc, acc, good, vgood)</p>
+        <p><strong>Purpose:</strong> Predict the acceptance level of a car based on its attributes.</p>
     </div>
     """, unsafe_allow_html=True)
 
+# --- EDA (Revised for Categorical Data) ---
+
 def perform_eda(df):
-    """Perform basic exploratory data analysis for Online Retail data"""
+    """Perform exploratory data analysis for Car Evaluation data"""
     
     st.markdown('<h2 class="section-header">📊 Exploratory Data Analysis</h2>', unsafe_allow_html=True)
-    
-    df_clean = df.copy()
-    
-    # Calculate Total Sales
-    df_clean['TotalSales'] = df_clean['Quantity'] * df_clean['UnitPrice']
     
     # Create tabs for different analyses
     tab1, tab2, tab3 = st.tabs([
         "📈 Overview",
-        "🗺️ Geographic Analysis",
-        "💰 Sales Metrics"
+        "🎯 Evaluation Distribution",
+        "🔗 Feature Impact"
     ])
     
     with tab1:
@@ -235,101 +225,120 @@ def perform_eda(df):
         with col1:
             st.markdown(f"""
             <div class="metric-card">
-                <h3>Total Transactions</h3>
-                <h2>{len(df_clean):,}</h2>
+                <h3>Total Samples</h3>
+                <h2>{len(df):,}</h2>
             </div>
             """, unsafe_allow_html=True)
         
         with col2:
             st.markdown(f"""
             <div class="metric-card">
-                <h3>Unique Products</h3>
-                <h2>{df_clean['StockCode'].nunique()}</h2>
+                <h3>Features</h3>
+                <h2>{len(df.columns)-1}</h2>
             </div>
             """, unsafe_allow_html=True)
         
         with col3:
+            unique_evaluations = df['Evaluation'].nunique()
             st.markdown(f"""
             <div class="metric-card">
-                <h3>Unique Customers</h3>
-                <h2>{df_clean['CustomerID'].nunique()}</h2>
+                <h3>Unique Classes</h3>
+                <h2>{unique_evaluations}</h2>
             </div>
             """, unsafe_allow_html=True)
         
         with col4:
             st.markdown(f"""
             <div class="metric-card">
-                <h3>Countries</h3>
-                <h2>{df_clean['Country'].nunique()}</h2>
+                <h3>Most Common</h3>
+                <h2>{df['Evaluation'].mode()[0]}</h2>
             </div>
             """, unsafe_allow_html=True)
         
         st.markdown("### 📋 Data Sample")
-        st.dataframe(df_clean.head(10), use_container_width=True, height=300)
-        
-        st.markdown("### 📊 Statistical Summary (Sales)")
-        st.dataframe(df_clean[['Quantity', 'UnitPrice', 'TotalSales']].describe(), use_container_width=True)
+        st.dataframe(df.head(10), use_container_width=True, height=300)
         
     with tab2:
-        st.markdown("### 🗺️ Top 10 Countries by Transaction Count")
-        country_counts = df_clean['Country'].value_counts().head(10).reset_index()
-        country_counts.columns = ['Country', 'Count']
+        st.markdown("### 🥧 Evaluation Distribution")
         
-        fig = px.bar(country_counts, x='Country', y='Count',
-                     title='Transaction Volume by Country',
-                     color='Count', color_continuous_scale=px.colors.sequential.Plasma)
-        st.plotly_chart(fig, use_container_width=True)
+        # Define specific colors for evaluation classes
+        color_map = {'unacc': '#ef4444', 'acc': '#3b82f6', 'good': '#f59e0b', 'vgood': '#22c55e'}
+        
+        col1, col2 = st.columns([1, 1])
+        
+        with col1:
+            fig = px.pie(df, names='Evaluation',
+                         title='Overall Car Evaluation Distribution',
+                         color='Evaluation',
+                         color_discrete_map=color_map,
+                         hole=0.4)
+            fig.update_traces(textposition='inside', textinfo='percent+label')
+            st.plotly_chart(fig, use_container_width=True)
+        
+        with col2:
+            st.markdown("### 📊 Count by Evaluation")
+            evaluation_counts = df['Evaluation'].value_counts().reset_index()
+            evaluation_counts.columns = ['Evaluation', 'Count']
+            
+            fig = px.bar(evaluation_counts, x='Evaluation', y='Count',
+                         color='Evaluation',
+                         color_discrete_map=color_map,
+                         text='Count',
+                         title='Count of Each Evaluation Class')
+            fig.update_traces(textposition='outside')
+            fig.update_layout(showlegend=False)
+            st.plotly_chart(fig, use_container_width=True)
 
     with tab3:
-        st.markdown("### 📈 Sales Trend Over Time (Monthly)")
-        # Prepare data for time series
-        sales_trend = df_clean.set_index('InvoiceDate').resample('M')['TotalSales'].sum().reset_index()
+        st.markdown("### 📈 Evaluation Split by Feature")
+        feature_cols = df.columns[:-1].tolist()
         
-        fig = px.line(sales_trend, x='InvoiceDate', y='TotalSales',
-                      title='Monthly Total Sales',
-                      markers=True, line_shape='spline')
-        fig.update_traces(line=dict(color='#667eea', width=3))
-        st.plotly_chart(fig, use_container_width=True)
+        selected_feature = st.selectbox("Select Feature to Compare:", feature_cols, index=5) # Default to Safety
         
-        st.markdown("### 📦 Top 10 Bestselling Products (by Quantity)")
-        top_products = df_clean.groupby('Description')['Quantity'].sum().sort_values(ascending=False).head(10).reset_index()
-        
-        fig = px.bar(top_products, x='Quantity', y='Description', 
-                     orientation='h', 
-                     color='Quantity',
-                     color_continuous_scale=px.colors.sequential.Viridis,
-                     title='Top 10 Products by Total Quantity Sold')
-        fig.update_layout(yaxis={'categoryorder':'total ascending'})
-        st.plotly_chart(fig, use_container_width=True)
+        if selected_feature:
+            fig = px.histogram(df, x=selected_feature, color='Evaluation',
+                               barmode='group',
+                               color_discrete_map=color_map,
+                               title=f'Evaluation Breakdown by {selected_feature}')
+            st.plotly_chart(fig, use_container_width=True)
 
+# --- ML ANALYSIS (Revised for Categorical Classification) ---
 
-# --- MAIN APPLICATION LOGIC ---
-
-def main():
-    load_custom_css()
+def perform_ml_analysis(df):
+    """Perform machine learning analysis using Random Forest after encoding."""
     
-    st.markdown(f'<h1 class="main-header">{APP_CONFIG["title"]}</h1>', unsafe_allow_html=True)
-    st.markdown(f'<p class="subtitle">{APP_CONFIG["description"]}</p>', unsafe_allow_html=True)
+    st.markdown('<h2 class="section-header">🤖 Machine Learning Classification</h2>', unsafe_allow_html=True)
     
-    display_dataset_info()
+    # 1. Feature Engineering: One-Hot Encoding for all features
+    X = df.drop(columns=['Evaluation'])
+    y = df['Evaluation']
     
-    df = load_online_retail_dataset()
+    # Use pandas get_dummies for One-Hot Encoding (OHE)
+    X_encoded = pd.get_dummies(X, drop_first=True)
     
-    if not df.empty:
-        perform_eda(df)
+    # 2. Sidebar for ML configuration
+    with st.expander("⚙️ Model Configuration (Random Forest)", expanded=True):
+        col1, col2, col3 = st.columns(3)
         
-        # Display note about ML section removal
-        st.markdown("""
-        <div class="info-box" style="margin-top: 3rem;">
-        <strong>NOTE:</strong> Advanced sections (ML Analysis and PCA) have been removed or commented out 
-        because they were based on the Breast Cancer dataset's structure and are not directly compatible 
-        with the Online Retail transaction data (which is suited for clustering or association rule mining).
-        </div>
-        """, unsafe_allow_html=True)
+        with col1:
+            test_size = st.slider("Test set size:", 0.1, 0.5, 0.25, 0.05)
+        with col2:
+            n_estimators = st.slider("Number of trees:", 50, 300, 150, 50)
+        with col3:
+            random_state = st.number_input("Random seed:", 1, 100, 42)
+    
+    # 3. Train-test split
+    X_train, X_test, y_train, y_test = train_test_split(
+        X_encoded, y, test_size=test_size, random_state=random_state, stratify=y
+    )
+    
+    # 4. Train model
+    with st.spinner("🔄 Training Random Forest classifier..."):
+        rf = RandomForestClassifier(n_estimators=n_estimators, random_state=random_state)
+        rf.fit(X_train, y_train)
         
-        # Placeholders for future development:
-        # perform_ml_analysis(df) 
-        # perform_pca_analysis(df)
-
-if __name__ == "__main__":
-    main()
+        train_score = rf.score(X_train, y_train)
+        test_score = rf.score(X_test, y_test)
+    
+    # 5. Display metrics
+    col1, col2, col3, col4 = st.columns(4)
