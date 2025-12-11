@@ -12,16 +12,23 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, confusion_matrix, roc_curve, auc
 import warnings
 import io
+
 warnings.filterwarnings('ignore')
 
-# Configuration
+# --- CONFIGURATION ---
 APP_CONFIG = {
     "title": "🔬 Breast Cancer Wisconsin Diagnostic Analyzer",
     "version": "3.0",
     "description": "AI-Powered Analysis of Breast Cancer Diagnostic Features"
 }
 
-# Custom CSS for better styling
+st.set_page_config(
+    page_title=APP_CONFIG["title"],
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# --- 1. CUSTOM CSS ---
 def load_custom_css():
     st.markdown("""
     <style>
@@ -172,6 +179,9 @@ def load_custom_css():
     </style>
     """, unsafe_allow_html=True)
 
+# --- 2. DATA LOADING FUNCTIONS ---
+
+@st.cache_data(show_spinner="Downloading default dataset...")
 def load_dataset_from_url():
     """Load the Breast Cancer Wisconsin dataset directly from UCI"""
     try:
@@ -187,72 +197,31 @@ def load_dataset_from_url():
         ]
         
         df = pd.read_csv(url, header=None, names=column_names)
+        
+        # Drop the 'ID' column as it's not a feature
+        df = df.drop(columns=['ID'])
+        
         return df
     except Exception as e:
-        st.error(f"Error loading dataset from URL: {e}")
+        st.error(f"Error loading dataset from URL. Please check your network connection: {e}")
         return None
 
+# Simplified loading to rely on the robust URL loader (ucimlrepo requires an extra dependency/install step)
 def load_default_dataset():
-    """Load the Breast Cancer Wisconsin dataset using ucimlrepo"""
-    try:
-        from ucimlrepo import fetch_ucirepo
-        dataset = fetch_ucirepo(id=17)
-        X = dataset.data.features
-        y = dataset.data.targets
-        df = pd.concat([X, y], axis=1)
-        return df
-    except:
-        # Fallback to direct URL download
-        return load_dataset_from_url()
+    """Wrapper for the main data loading function."""
+    return load_dataset_from_url()
 
+@st.cache_data(show_spinner="Loading custom dataset...")
 def load_dataset_from_custom_url(url):
     """Load dataset from a custom URL provided by user"""
     try:
-        # Try different common formats
-        df = None
-        error_messages = []
-        
-        # Try CSV
-        try:
-            df = pd.read_csv(url)
-            return df
-        except Exception as e:
-            error_messages.append(f"CSV: {str(e)}")
-        
-        # Try with different separators
-        try:
-            df = pd.read_csv(url, sep='\t')
-            return df
-        except Exception as e:
-            error_messages.append(f"TSV: {str(e)}")
-        
-        # Try Excel
-        try:
-            df = pd.read_excel(url)
-            return df
-        except Exception as e:
-            error_messages.append(f"Excel: {str(e)}")
-        
-        raise Exception("\n".join(error_messages))
-        
+        df = pd.read_csv(url)
+        return df
     except Exception as e:
-        st.error(f"Unable to load dataset from URL. Errors encountered:\n{e}")
+        st.error(f"Unable to load dataset from URL (tried as CSV). Error: {e}")
         return None
 
-def get_feature_info():
-    """Return information about features in the dataset"""
-    return {
-        "radius": "Mean of distances from center to points on the perimeter",
-        "texture": "Standard deviation of gray-scale values",
-        "perimeter": "Perimeter of the cell nucleus",
-        "area": "Area of the cell nucleus",
-        "smoothness": "Local variation in radius lengths",
-        "compactness": "Perimeter² / area - 1.0",
-        "concavity": "Severity of concave portions of the contour",
-        "concave_points": "Number of concave portions of the contour",
-        "symmetry": "Symmetry of the cell nucleus",
-        "fractal_dimension": "Coastline approximation - 1"
-    }
+# --- 3. UI/ANALYSIS FUNCTIONS ---
 
 def display_dataset_info():
     """Display information about the dataset"""
@@ -282,74 +251,77 @@ def perform_eda(df):
     ])
     
     with tab1:
+        # Ensure the Diagnosis column exists before calculating metrics
+        has_diagnosis = 'Diagnosis' in df.columns
+        
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
-            st.markdown("""
+            st.markdown(f"""
             <div class="metric-card">
                 <h3>Total Samples</h3>
-                <h2>{}</h2>
+                <h2>{len(df)}</h2>
             </div>
-            """.format(len(df)), unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
         
         with col2:
-            st.markdown("""
+            st.markdown(f"""
             <div class="metric-card">
                 <h3>Features</h3>
-                <h2>{}</h2>
+                <h2>{len(df.columns) - 1 if has_diagnosis else len(df.columns)}</h2>
             </div>
-            """.format(len(df.columns)-1 if 'Diagnosis' in df.columns else len(df.columns)), unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
         
         with col3:
-            if 'Diagnosis' in df.columns:
+            if has_diagnosis:
                 benign_count = (df['Diagnosis'] == 'B').sum()
-                st.markdown("""
+                st.markdown(f"""
                 <div class="metric-card">
                     <h3>Benign (B)</h3>
-                    <h2>{}</h2>
+                    <h2>{benign_count}</h2>
                 </div>
-                """.format(benign_count), unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
             else:
-                st.markdown("""
+                st.markdown(f"""
                 <div class="metric-card">
                     <h3>Missing Values</h3>
-                    <h2>{}</h2>
+                    <h2>{df.isnull().sum().sum()}</h2>
                 </div>
-                """.format(df.isnull().sum().sum()), unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
         
         with col4:
-            if 'Diagnosis' in df.columns:
+            if has_diagnosis:
                 malignant_count = (df['Diagnosis'] == 'M').sum()
-                st.markdown("""
+                st.markdown(f"""
                 <div class="metric-card">
                     <h3>Malignant (M)</h3>
-                    <h2>{}</h2>
+                    <h2>{malignant_count}</h2>
                 </div>
-                """.format(malignant_count), unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
             else:
-                st.markdown("""
+                st.markdown(f"""
                 <div class="metric-card">
                     <h3>Numeric Cols</h3>
-                    <h2>{}</h2>
+                    <h2>{len(df.select_dtypes(include=[np.number]).columns)}</h2>
                 </div>
-                """.format(len(df.select_dtypes(include=[np.number]).columns)), unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
         
         st.markdown("### 📋 Data Sample")
         st.dataframe(df.head(15), use_container_width=True, height=400)
         
         st.markdown("### 📊 Statistical Summary")
-        st.dataframe(df.describe(), use_container_width=True)
+        st.dataframe(df.describe().T, use_container_width=True) # Transpose for better view
         
-        if 'Diagnosis' in df.columns:
+        if has_diagnosis:
             col1, col2 = st.columns([1, 1])
             
             with col1:
                 st.markdown("### 🥧 Diagnosis Distribution")
                 fig = px.pie(df, names='Diagnosis', 
-                            title='Distribution of Diagnosis',
-                            color='Diagnosis',
-                            color_discrete_map={'B':'#22c55e', 'M':'#ef4444'},
-                            hole=0.4)
+                             title='Distribution of Diagnosis',
+                             color='Diagnosis',
+                             color_discrete_map={'B':'#22c55e', 'M':'#ef4444'},
+                             hole=0.4)
                 fig.update_traces(textposition='inside', textinfo='percent+label')
                 st.plotly_chart(fig, use_container_width=True)
             
@@ -358,9 +330,9 @@ def perform_eda(df):
                 diagnosis_counts = df['Diagnosis'].value_counts().reset_index()
                 diagnosis_counts.columns = ['Diagnosis', 'Count']
                 fig = px.bar(diagnosis_counts, x='Diagnosis', y='Count',
-                           color='Diagnosis',
-                           color_discrete_map={'B':'#22c55e', 'M':'#ef4444'},
-                           text='Count')
+                             color='Diagnosis',
+                             color_discrete_map={'B':'#22c55e', 'M':'#ef4444'},
+                             text='Count')
                 fig.update_traces(textposition='outside')
                 fig.update_layout(showlegend=False)
                 st.plotly_chart(fig, use_container_width=True)
@@ -382,6 +354,7 @@ def perform_eda(df):
             
             if selected_features:
                 for feature in selected_features:
+                    st.markdown(f"#### {feature}")
                     if chart_type == "Both":
                         fig = make_subplots(
                             rows=1, cols=2,
@@ -390,7 +363,7 @@ def perform_eda(df):
                         
                         fig.add_trace(
                             go.Histogram(x=df[feature], name=feature, nbinsx=30, 
-                                       marker_color='#667eea'),
+                                         marker_color='#667eea'),
                             row=1, col=1
                         )
                         
@@ -403,13 +376,13 @@ def perform_eda(df):
                         st.plotly_chart(fig, use_container_width=True)
                     elif chart_type == "Histogram":
                         fig = px.histogram(df, x=feature, nbins=30, 
-                                         title=f'{feature} Distribution',
-                                         color_discrete_sequence=['#667eea'])
+                                             title=f'{feature} Distribution',
+                                             color_discrete_sequence=['#667eea'])
                         st.plotly_chart(fig, use_container_width=True)
                     else:  # Violin Plot
                         fig = px.violin(df, y=feature, box=True, 
-                                      title=f'{feature} Distribution',
-                                      color_discrete_sequence=['#764ba2'])
+                                         title=f'{feature} Distribution',
+                                         color_discrete_sequence=['#764ba2'])
                         st.plotly_chart(fig, use_container_width=True)
     
     with tab3:
@@ -423,16 +396,16 @@ def perform_eda(df):
                 st.markdown("#### Settings")
                 show_values = st.checkbox("Show correlation values", value=False)
                 color_scale = st.selectbox("Color scheme:", 
-                                          ["RdBu_r", "Viridis", "Plasma", "Turbo"])
+                                            ["RdBu_r", "Viridis", "Plasma", "Turbo"])
             
             with col1:
                 corr_matrix = numeric_df.corr()
                 
                 fig = px.imshow(corr_matrix,
-                              text_auto='.2f' if show_values else False,
-                              aspect='auto',
-                              color_continuous_scale=color_scale,
-                              title='Feature Correlation Heatmap')
+                                 text_auto='.2f' if show_values else False,
+                                 aspect='auto',
+                                 color_continuous_scale=color_scale,
+                                 title='Feature Correlation Heatmap')
                 fig.update_layout(height=700)
                 st.plotly_chart(fig, use_container_width=True)
             
@@ -451,8 +424,8 @@ def perform_eda(df):
             
             if high_corr:
                 high_corr_df = pd.DataFrame(high_corr).sort_values('Correlation', 
-                                                                   key=abs, 
-                                                                   ascending=False)
+                                                                    key=abs, 
+                                                                    ascending=False)
                 st.dataframe(high_corr_df, use_container_width=True)
             else:
                 st.info(f"No correlations above {threshold}")
@@ -474,24 +447,24 @@ def perform_eda(df):
             with col2:
                 plot_type = st.radio("Plot type:", ["Box", "Violin", "Strip"])
             
-            if 'Diagnosis' in df.columns and selected_feature:
+            if has_diagnosis and selected_feature:
                 if plot_type == "Box":
                     fig = px.box(df, x='Diagnosis', y=selected_feature,
-                               color='Diagnosis',
-                               title=f'{selected_feature} by Diagnosis',
-                               color_discrete_map={'B':'#22c55e', 'M':'#ef4444'},
-                               points="all")
-                elif plot_type == "Violin":
-                    fig = px.violin(df, x='Diagnosis', y=selected_feature,
-                                  color='Diagnosis',
-                                  title=f'{selected_feature} by Diagnosis',
-                                  color_discrete_map={'B':'#22c55e', 'M':'#ef4444'},
-                                  box=True)
-                else:  # Strip
-                    fig = px.strip(df, x='Diagnosis', y=selected_feature,
                                  color='Diagnosis',
                                  title=f'{selected_feature} by Diagnosis',
-                                 color_discrete_map={'B':'#22c55e', 'M':'#ef4444'})
+                                 color_discrete_map={'B':'#22c55e', 'M':'#ef4444'},
+                                 points="all")
+                elif plot_type == "Violin":
+                    fig = px.violin(df, x='Diagnosis', y=selected_feature,
+                                     color='Diagnosis',
+                                     title=f'{selected_feature} by Diagnosis',
+                                     color_discrete_map={'B':'#22c55e', 'M':'#ef4444'},
+                                     box=True)
+                else:  # Strip
+                    fig = px.strip(df, x='Diagnosis', y=selected_feature,
+                                     color='Diagnosis',
+                                     title=f'{selected_feature} by Diagnosis',
+                                     color_discrete_map={'B':'#22c55e', 'M':'#ef4444'})
                 
                 st.plotly_chart(fig, use_container_width=True)
                 
@@ -518,7 +491,7 @@ def perform_eda(df):
     with tab5:
         st.markdown("### 🎯 Feature Importance Analysis")
         
-        if 'Diagnosis' in df.columns:
+        if has_diagnosis:
             numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
             
             if numeric_cols and len(numeric_cols) > 1:
@@ -528,7 +501,8 @@ def perform_eda(df):
                     top_n = st.slider("Number of features:", 5, 20, 15)
                     show_all = st.checkbox("Show all features")
                 
-                X = df[numeric_cols].fillna(df[numeric_cols].mean())
+                # Use .copy() to avoid SettingWithCopyWarning
+                X = df[numeric_cols].fillna(df[numeric_cols].mean()).copy()
                 y = df['Diagnosis'].map({'B': 0, 'M': 1})
                 
                 with st.spinner("Computing feature importance..."):
@@ -545,17 +519,21 @@ def perform_eda(df):
                 
                 with col1:
                     fig = px.bar(importance_df, 
-                               x='Importance', 
-                               y='Feature',
-                               orientation='h',
-                               title=f'Top {len(importance_df)} Most Important Features',
-                               color='Importance',
-                               color_continuous_scale='viridis')
+                                 x='Importance', 
+                                 y='Feature',
+                                 orientation='h',
+                                 title=f'Top {len(importance_df)} Most Important Features',
+                                 color='Importance',
+                                 color_continuous_scale='viridis')
                     fig.update_layout(height=max(400, len(importance_df) * 25))
                     st.plotly_chart(fig, use_container_width=True)
                 
                 st.markdown("### 📋 Feature Importance Table")
                 st.dataframe(importance_df.reset_index(drop=True), use_container_width=True)
+            else:
+                st.warning("Not enough numeric features to calculate importance.")
+        else:
+            st.warning("Cannot perform Feature Importance Analysis: 'Diagnosis' column is missing.")
 
 def perform_ml_analysis(df):
     """Perform machine learning analysis"""
@@ -652,11 +630,11 @@ def perform_ml_analysis(df):
         cm = confusion_matrix(y_test, y_pred)
         
         fig = px.imshow(cm, 
-                        text_auto=True,
-                        labels=dict(x="Predicted", y="Actual"),
-                        x=['Benign (0)', 'Malignant (1)'],
-                        y=['Benign (0)', 'Malignant (1)'],
-                        color_continuous_scale='Blues')
+                         text_auto=True,
+                         labels=dict(x="Predicted", y="Actual"),
+                         x=['Benign (0)', 'Malignant (1)'],
+                         y=['Benign (0)', 'Malignant (1)'],
+                         color_continuous_scale='Blues')
         fig.update_layout(title='Confusion Matrix', height=400)
         st.plotly_chart(fig, use_container_width=True)
     
@@ -702,6 +680,7 @@ def perform_pca_analysis(df):
     
     st.markdown('<h2 class="section-header">🔬 Principal Component Analysis</h2>', unsafe_allow_html=True)
     
+    has_diagnosis = 'Diagnosis' in df.columns
     numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
     
     if len(numeric_cols) < 2:
@@ -713,7 +692,101 @@ def perform_pca_analysis(df):
     # PCA Configuration
     with st.expander("⚙️ PCA Configuration", expanded=True):
         n_components = st.slider("Number of components:", 2, min(10, len(numeric_cols)), 
-                                min(5, len(numeric_cols)))
-    
+                                 min(5, len(numeric_cols)))
+        
     # Standardize
     scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+    
+    # Run PCA
+    pca = PCA(n_components=n_components)
+    principal_components = pca.fit_transform(X_scaled)
+    
+    # 1. Explained Variance Plot
+    st.markdown("### 📉 Explained Variance Ratio (Scree Plot)")
+    
+    explained_variance = pca.explained_variance_ratio_
+    variance_df = pd.DataFrame({
+        'Component': [f'PC{i+1}' for i in range(len(explained_variance))],
+        'Explained Variance': explained_variance,
+        'Cumulative Variance': np.cumsum(explained_variance)
+    })
+    
+    # Plotly Scree Plot
+    fig_scree = go.Figure()
+    fig_scree.add_trace(go.Bar(
+        x=variance_df['Component'],
+        y=variance_df['Explained Variance'],
+        name='Individual',
+        marker_color='#667eea'
+    ))
+    fig_scree.add_trace(go.Scatter(
+        x=variance_df['Component'],
+        y=variance_df['Cumulative Variance'],
+        name='Cumulative',
+        mode='lines+markers',
+        line=dict(color='#ef4444', width=2),
+        yaxis='y2' # Use a secondary axis
+    ))
+    
+    fig_scree.update_layout(
+        title='Scree Plot: Explained Variance by Principal Component',
+        xaxis_title='Principal Component',
+        yaxis_title='Explained Variance Ratio',
+        yaxis2=dict(
+            title='Cumulative Explained Variance',
+            overlaying='y',
+            side='right'
+        ),
+        height=450
+    )
+    st.plotly_chart(fig_scree, use_container_width=True)
+    
+    st.markdown(f"""
+    <div class="success-box">
+    <strong>Cumulative Variance:</strong> The first **{n_components}** principal components explain **{np.cumsum(explained_variance)[-1]*100:.2f}%** of the total variance.
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # 2. PCA Scatter Plot (Only if n_components >= 2)
+    if n_components >= 2 and has_diagnosis:
+        st.markdown("### 🗺️ 2D PCA Visualization")
+        
+        pca_2d_df = pd.DataFrame(data=principal_components[:, 0:2], columns=['PC1', 'PC2'])
+        pca_2d_df['Diagnosis'] = df['Diagnosis'].values
+        
+        fig_scatter = px.scatter(
+            pca_2d_df,
+            x='PC1',
+            y='PC2',
+            color='Diagnosis',
+            color_discrete_map={'B':'#22c55e', 'M':'#ef4444'},
+            title='PCA 2D Projection (PC1 vs PC2)',
+            hover_data=['Diagnosis']
+        )
+        fig_scatter.update_layout(height=600)
+        st.plotly_chart(fig_scatter, use_container_width=True)
+        st.info("This plot shows how well the data separates using the two most important components.")
+
+# --- 4. MAIN FUNCTION ---
+
+def main():
+    load_custom_css()
+    
+    st.markdown(f'<h1 class="main-header">{APP_CONFIG["title"]}</h1>', unsafe_allow_html=True)
+    st.markdown(f'<p class="subtitle">{APP_CONFIG["description"]}</p>', unsafe_allow_html=True)
+
+    df = None
+    
+    # --- Sidebar for Data Source ---
+    with st.sidebar:
+        st.header("Data Source")
+        
+        data_source = st.radio(
+            "Select Data Source:",
+            ("Default Breast Cancer Data (UCI)", "Upload CSV File", "Custom URL"),
+            index=0
+        )
+        
+        if data_source == "Default Breast Cancer Data (UCI)":
+            df = load_default_dataset()
