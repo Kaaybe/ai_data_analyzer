@@ -1,4 +1,7 @@
 streamlit
 pandas
 plotly
-# Add any other libraries your app uses (e.g., numpy, scikit-learn)
+seaborn         
+matplotlib
+scipy
+scikit-learn
