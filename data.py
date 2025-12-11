@@ -13,6 +13,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, confusion_matrix, roc_curve, auc
 import warnings
+pip install ucimlrepo
 warnings.filterwarnings('ignore')
 
 # Configuration
@@ -21,6 +22,22 @@ APP_CONFIG = {
     "version": "2.0",
     "description": "AI-Powered Analysis of Breast Cancer Diagnostic Features"
 }
+
+from ucimlrepo import fetch_ucirepo 
+  
+# fetch dataset 
+breast_cancer_wisconsin_diagnostic = fetch_ucirepo(id=17) 
+  
+# data (as pandas dataframes) 
+X = breast_cancer_wisconsin_diagnostic.data.features 
+y = breast_cancer_wisconsin_diagnostic.data.targets 
+  
+# metadata 
+print(breast_cancer_wisconsin_diagnostic.metadata) 
+  
+# variable information 
+print(breast_cancer_wisconsin_diagnostic.variables) 
+
 
 # Custom CSS for better styling
 def load_custom_css():
