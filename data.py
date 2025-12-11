@@ -78,15 +78,34 @@ st.markdown("""
     
     .stTabs [data-baseweb="tab"] {
         height: 50px;
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
         border-radius: 10px;
         padding: 0 24px;
         font-weight: 600;
+        color: #1e293b;
+        border: 2px solid #cbd5e1;
     }
     
     .stTabs [aria-selected="true"] {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
+        color: white !important;
+        border: 2px solid #5a67d8;
+    }
+    
+    /* Fix text visibility */
+    h1, h2, h3, h4, h5, h6, p, span, div {
+        color: #1e293b;
+    }
+    
+    /* DataFrames */
+    .dataframe {
+        color: #1e293b !important;
+    }
+    
+    /* Selectbox and inputs */
+    .stSelectbox label, .stSlider label, .stCheckbox label {
+        color: #1e293b !important;
+        font-weight: 600;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -190,6 +209,8 @@ def show_overview(df):
     st.markdown("### 🔍 Sample Data")
     st.dataframe(df.head(20), use_container_width=True, height=400)
     
+    st.markdown("---")
+    
     # Class distribution
     col1, col2 = st.columns(2)
     
@@ -247,7 +268,12 @@ def show_feature_analysis(df):
                             color_continuous_scale='viridis',
                             text='Count',
                             title=f'{feature.replace("_", " ").title()} Distribution')
-                fig.update_traces(textposition='outside')
+                fig.update_traces(textposition='outside', textfont=dict(size=14, color='#1e293b'))
+                fig.update_layout(
+                    font=dict(color='#1e293b'),
+                    plot_bgcolor='white',
+                    paper_bgcolor='white'
+                )
                 st.plotly_chart(fig, use_container_width=True)
         
         with col2:
@@ -263,7 +289,12 @@ def show_feature_analysis(df):
                             color_continuous_scale='plasma',
                             text='Count',
                             title=f'{feature.replace("_", " ").title()} Distribution')
-                fig.update_traces(textposition='outside')
+                fig.update_traces(textposition='outside', textfont=dict(size=14, color='#1e293b'))
+                fig.update_layout(
+                    font=dict(color='#1e293b'),
+                    plot_bgcolor='white',
+                    paper_bgcolor='white'
+                )
                 st.plotly_chart(fig, use_container_width=True)
 
 def show_relationship_analysis(df):
@@ -310,7 +341,10 @@ def show_relationship_analysis(df):
             title=f'{selected_feature.replace("_", " ").title()} Distribution by Acceptability',
             xaxis_title=selected_feature.replace('_', ' ').title(),
             yaxis_title='Count',
-            height=400
+            height=400,
+            font=dict(color='#1e293b'),
+            plot_bgcolor='white',
+            paper_bgcolor='white'
         )
         st.plotly_chart(fig, use_container_width=True)
     
@@ -333,7 +367,12 @@ def show_relationship_analysis(df):
                     y=crosstab.columns,
                     color_continuous_scale='viridis',
                     text_auto=True)
-    fig.update_layout(height=400)
+    fig.update_layout(
+        height=400,
+        font=dict(color='#1e293b'),
+        plot_bgcolor='white',
+        paper_bgcolor='white'
+    )
     st.plotly_chart(fig, use_container_width=True)
 
 def show_comparative_analysis(df):
@@ -375,7 +414,12 @@ def show_comparative_analysis(df):
                        color_continuous_scale='blues',
                        text_auto=True,
                        title=f'{feature1.replace("_", " ").title()} vs {feature2.replace("_", " ").title()}')
-        fig.update_layout(height=500)
+        fig.update_layout(
+            height=500,
+            font=dict(color='#1e293b'),
+            plot_bgcolor='white',
+            paper_bgcolor='white'
+        )
         st.plotly_chart(fig, use_container_width=True)
     
     with col2:
