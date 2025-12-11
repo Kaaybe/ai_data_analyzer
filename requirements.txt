@@ -1,8 +1,7 @@
 streamlit
 pandas
 numpy
-scikit-learn
 plotly
-seaborn
+scipy
+scikit-learn
 ucimlrepo
-matplotlib
