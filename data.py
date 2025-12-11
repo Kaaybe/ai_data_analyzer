@@ -4,13 +4,12 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from scipy import stats
-from sklearn.preprocessing import StandardScaler
-from sklearn.decomposition import PCA
+from scipy import stats # Kept for completeness, though not strictly used in this categorical analysis
+from sklearn.decomposition import PCA # Kept for completeness, though not strictly used
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report, confusion_matrix, roc_curve, auc
-from ucimlrepo import fetch_ucirepo # Import necessary for clean data loading
+from sklearn.metrics import classification_report, confusion_matrix
+from ucimlrepo import fetch_ucirepo # Critical for loading the dataset
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -21,7 +20,7 @@ APP_CONFIG = {
     "description": "AI-Powered Analysis of Car Evaluation Decisions (Categorical Data)"
 }
 
-# --- CUSTOM CSS (Kept as provided) ---
+# --- CUSTOM CSS ---
 def load_custom_css():
     st.markdown("""
     <style>
@@ -189,7 +188,7 @@ def load_car_evaluation_dataset():
         st.success(f"✅ Data loaded successfully! Total {len(df)} car evaluations.")
         return df
     except Exception as e:
-        st.error(f"Error loading dataset using ucimlrepo: {e}. Ensure 'ucimlrepo' is in requirements.txt")
+        st.error(f"Error loading dataset using ucimlrepo: {e}. Please ensure 'ucimlrepo' is installed and your requirements.txt is correct.")
         return pd.DataFrame()
 
 def display_dataset_info():
@@ -334,11 +333,4 @@ def perform_ml_analysis(df):
     
     # 4. Train model
     with st.spinner("🔄 Training Random Forest classifier..."):
-        rf = RandomForestClassifier(n_estimators=n_estimators, random_state=random_state)
-        rf.fit(X_train, y_train)
-        
-        train_score = rf.score(X_train, y_train)
-        test_score = rf.score(X_test, y_test)
-    
-    # 5. Display metrics
-    col1, col2, col3, col4 = st.columns(4)
+        rf = RandomForestClassifier(n_estimators=n_estimators, random_
