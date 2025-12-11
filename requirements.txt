@@ -1,7 +1,9 @@
+# /mount/src/ai_data_analyzer/requirements.txt
 streamlit
 pandas
-plotly
-seaborn         
-matplotlib
-scipy
+numpy
 scikit-learn
+plotly
+seaborn
+ucimlrepo
+matplotlib
